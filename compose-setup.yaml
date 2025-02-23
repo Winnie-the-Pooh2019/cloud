@@ -34,7 +34,22 @@ services:
         source: web-root
         target: /var/www/certbot
 
+  php-config:
+    image: alpine:latest
+    container_name: php-config
+    volumes:
+      - type: bind
+        source: ./php/config.php
+        target: /config/source
+      - type: volume
+        source: cloud-data
+        target: /config/dist
+    command: > 
+      sh -c "cp -r /config/source/* /config/dist/config
+
 volumes:
+  cloud-data:
+    driver: local
   certbot-etc:
     driver: local
   certbot-var:
