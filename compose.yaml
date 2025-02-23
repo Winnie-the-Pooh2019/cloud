@@ -1,0 +1,106 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:latest
+    container_name: nextcloud_db
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: db_data
+        target: /var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    networks:
+      - nextcloud_network
+
+  redis:
+    image: redis:latest
+    container_name: nextcloud_redis
+    restart: unless-stopped
+    networks:
+      - nextcloud_network
+
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud_app
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - type: volume
+        source: nextcloud_html
+        target: /var/www/html
+      - type: volume
+        source: nextcloud_apps
+        target: /var/www/html/custom_apps
+      - type: volume
+        source: nextcloud_config
+        target: /var/www/html/config
+      - type: volume
+        source: nextcloud_data
+        target: /var/www/html/data
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_HOST=redis
+    depends_on:
+      - db
+      - redis
+    networks:
+      - nextcloud_network
+
+  proxy:
+    image: nginx:latest
+    container_name: nextcloud_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - type: bind
+        source: ./nginx.conf
+        target: /etc/nginx/nginx.conf
+      - type: volume
+        source: certs
+        target: /etc/letsencrypt
+      - type: volume
+        source: certs-data
+        target: /data/letsencrypt
+    depends_on:
+      - nextcloud
+    networks:
+      - nextcloud_network
+
+  certbot:
+    image: certbot/certbot
+    container_name: nextcloud_certbot
+    volumes:
+      - type: volume
+        source: certs
+        target: /etc/letsencrypt
+      - type: volume
+        source: certs-data
+        target: /data/letsencrypt
+    depends_on:
+      - proxy
+    entrypoint: >
+      sh -c "certbot certonly --webroot -w /data/letsencrypt 
+      --email ivan@duvanoff.su --agree-tos --no-eff-email 
+      --staging -d cloud.duvanoff.su --preferred-challenges http"
+
+networks:
+  nextcloud_network:
+
+volumes:
+  db_data:
+  nextcloud_html:
+  nextcloud_config:
+  nextcloud_apps:
+  nextcloud_data:
+  certs:
+  certs-data:
