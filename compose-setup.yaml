@@ -45,7 +45,7 @@ services:
         source: cloud-data
         target: /config/dist
     command: > 
-      sh -c "cp -r /config/source/* /config/dist/config
+      sh -c "cp -r /config/source/* /config/dist/config"
 
 volumes:
   cloud-data:
