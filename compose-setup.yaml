@@ -40,12 +40,12 @@ services:
     volumes:
       - type: bind
         source: ./php/config.php
-        target: /config/source
+        target: /source/config.php
       - type: volume
         source: cloud-data
-        target: /config/dist
+        target: /data
     command: > 
-      sh -c "cp -r /config/source/* /config/dist/config"
+      sh -c "cp /source/config.php /data/config.php"
 
 volumes:
   cloud-data:
