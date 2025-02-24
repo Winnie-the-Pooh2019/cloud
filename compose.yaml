@@ -4,51 +4,187 @@ services:
   db:
     image: postgres:latest
     container_name: db
-    restart: unless-stopped
     volumes:
       - type: volume
         source: db-data
         target: /var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${CLOUD_POSTGRES_DB}
+      - POSTGRES_USER=${CLOUD_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${CLOUD_POSTGRES_PASSWORD}
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "${CLOUD_POSTGRES_DB}", "-U", "${CLOUD_POSTGRES_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     networks:
       - cloud_network
+    restart: unless-stopped
 
   redis:
     image: redis:latest
     container_name: redis
-    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: redis-data
+        target: /data
     networks:
       - cloud_network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
 
   cloud:
     image: nextcloud:latest
     container_name: cloud
-    restart: unless-stopped
-    ports:
-      - "8080:80"
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=${CLOUD_POSTGRES_DB}
+      - POSTGRES_USER=${CLOUD_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${CLOUD_POSTGRES_PASSWORD}
+      - REDIS_HOST=redis
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USERNAME}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+      - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_HOSTNAME}
+      - OVERWRITECLIURL=https://cloud.duvanoff.su
+      - OVERWRITEPROTOCOL=https
+      - OVERWRITEHOST=cloud.duvanoff.su
     volumes:
       - type: volume
         source: cloud-data
         target: /var/www/html
-    environment:
-      - POSTGRES_HOST=db
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - REDIS_HOST=redis
-    depends_on:
-      - db
-      - redis
     networks:
       - cloud_network
+      - office-network
+      - nginx-network
+    ports:
+      - "8080:80"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:80/" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db-office:
+    image: postgres
+    container_name: db-office
+    environment:
+      - POSTGRES_DB=${OFFICE_POSTGRES_DB}
+      - POSTGRES_USER=${OFFICE_POSTGRES_USER}
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - type: volume
+        source: db-office-data
+        target: /var/lib/postgresql/data
+    networks:
+      - office-network
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  redis-office:
+    image: redis
+    container_name: redis-office
+    volumes:
+      - type: volume
+        source: redis-office-local
+        target: /data
+    networks:
+      - office-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  rabbitmq-office:
+    image: rabbitmq
+    container_name: rabbitmq-office
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    networks:
+      - office-network
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
+  office:
+    image: onlyoffice/documentserver
+    container_name: office
+    environment:
+      - DB_TYPE=postgres
+      - DB_HOST=db-office
+      - DB_PORT=5432
+      - DB_NAME=${OFFICE_POSTGRES_DB}
+      - DB_USER=${OFFICE_POSTGRES_USER}
+      - DB_PWD=${OFFICE_POSTGRES_PASSWORD}
+      - AMQP_TYPE=rabbitmq
+      - AMQP_URI=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq-office
+      - REDIS_SERVER_HOST=redis-office
+      - REDIS_SERVER_PORT=6379
+      - JWT_ENABLED=true
+      - JWT_SECRET=${OFFICE_JWT_SECRET}
+      - JWT_HEADER=Authorization
+      - JWT_IN_BODY='true'
+    volumes:
+      - type: volume
+        source: office-data
+        target: /var/www/onlyoffice/Data
+      - type: volume
+        source: office-log
+        target: /var/log/onlyoffice
+      - type: volume
+        source: office-cache
+        target: /var/lib/onlyoffice/documentserver/App_Data/cache/files
+      - type: volume
+        source: office-public
+        target: /var/www/onlyoffice/documentserver-example/public/files
+      - type: volume
+        source: office-fonts
+        target: /usr/share/fonts
+    networks:
+      - office-network
+      - cloud_network
+      - nginx-network
+    depends_on:
+      db-office:
+        condition: service_healthy
+      rabbitmq-office:
+        condition: service_healthy
+      cloud:
+        condition: service_healthy
+    restart: unless-stopped
 
   nginx:
     image: nginx:latest
     container_name: nginx
-    restart: unless-stopped
+    networks:
+      - nginx-network
     ports:
       - "80:80"
       - "443:443"
@@ -69,17 +205,38 @@ services:
         source: certbot-var
         target: /var/lib/letsencrypt
     depends_on:
-      - cloud
-    networks:
-      - cloud_network
+      office:
+        condition: service_started
+    restart: unless-stopped
 
 networks:
   cloud_network:
+    external: true
+  office-network:
+    external: true
+  nginx-network:
+    external: true
 
 volumes:
   db-data:
     driver: local
+  redis-data:
+    driver: local
   cloud-data:
+    driver: local
+  db-office-data:
+    driver: local
+  redis-office-data:
+    driver: local
+  office-data:
+    driver: local
+  office-log:
+    driver: local
+  office-cache:
+    driver: local
+  office-public:
+    driver: local
+  office-fonts:
     driver: local
   web-root:
     driver: local
