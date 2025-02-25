@@ -142,6 +142,13 @@ services:
       start_period: 90s
     restart: unless-stopped
 
+#  office:
+#    image: collabora/code
+#    container_name: office
+#    environment:
+#      - TZ=Russia/Novosibirsk
+#      - password=password
+
   office:
     image: onlyoffice/documentserver
     container_name: office
@@ -160,6 +167,7 @@ services:
       - JWT_SECRET=${OFFICE_JWT_SECRET}
       - JWT_HEADER=Authorization
       - JWT_IN_BODY='true'
+      - WOPI_ENABLED=true
     volumes:
       - type: volume
         source: office-data
