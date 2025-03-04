@@ -46,6 +46,23 @@ services:
         target: /data
     command: > 
       sh -c "cp /source/config.php /data/config.php"
+      
+  backup:
+    image: backup
+    container_name: backup
+    build:
+      context: ./backup
+      dockerfile: ./Dockerfile
+    volumes:
+      - type: bind
+        source: /data
+        target: /tmp/source
+      - type: volume
+        source: api-volume
+        target: /tmp/dist
+      - type: bind
+        source: $PROJECT_TEMP/backup
+        target: /tmp/back
 
 volumes:
   cloud-data:
