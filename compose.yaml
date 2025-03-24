@@ -142,13 +142,6 @@ services:
       start_period: 90s
     restart: unless-stopped
 
-#  office:
-#    image: collabora/code
-#    container_name: office
-#    environment:
-#      - TZ=Russia/Novosibirsk
-#      - password=password
-
   office:
     image: onlyoffice/documentserver
     container_name: office
@@ -196,6 +189,24 @@ services:
         condition: service_healthy
       rabbitmq-office:
         condition: service_healthy
+    restart: unless-stopped
+
+  track:
+    image: jetbrains/youtrack:2025.1.64291
+    container_name: track
+    environment:
+      - YT_BASE_URL=${TRACK_URL}
+    volumes:
+      - type: volume
+        source: track-data
+        target: /opt/youtrack/data
+      - type: volume
+        source: track-logs
+        target: /opt/youtrack/logs
+    networks:
+      - nginx-network
+    ports:
+      - '8080:8080'
     restart: unless-stopped
 
   nginx:
@@ -252,6 +263,10 @@ volumes:
   office-public:
     driver: local
   office-fonts:
+    driver: local
+  track-data:
+    driver: local
+  track-logs:
     driver: local
   web-root:
     driver: local
