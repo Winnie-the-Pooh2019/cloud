@@ -53,16 +53,6 @@ services:
     build:
       context: ./backup
       dockerfile: ./Dockerfile
-    volumes:
-      - type: bind
-        source: /data
-        target: /tmp/source
-      - type: volume
-        source: api-volume
-        target: /tmp/dist
-      - type: bind
-        source: $PROJECT_TEMP/backup
-        target: /tmp/back
 
 volumes:
   cloud-data:
