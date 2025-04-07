@@ -1,1 +1,5 @@
-docker-compose run --volume $1:/tmp/source backup-service python backup.py
+docker compose -f ./compose-setup.yaml run --build \
+-v $(pwd)/volumes/source:/tmp/dist \
+-v $(pwd)/volumes/backup/:/tmp/back \
+backup \
+-a check
