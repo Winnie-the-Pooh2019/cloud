@@ -17,7 +17,7 @@ for volume in "${volumes[@]}"; do
 
   docker compose -f ./compose-setup.yaml run --build \
   -v "cloud_$volume":/tmp/dist \
-  -v $(pwd)/backup/"$volume"/:/tmp/back backup -a restore
+  -v $(pwd)/backup/"$volume"/:/tmp/back --rm backup -a check
 done
 
 docker compose -f ./compose-setup.yaml up -d nginx
@@ -40,7 +40,7 @@ echo "0 9 * * 1 /usr/bin/docker compose -f $curdir/compose-setup.yaml run --rm c
 for volume in "${volumes[@]}"; do
   echo "adding autobackup of volume cloud_$volume to crontab"
 
-  echo "30 7 * * * /usr/bin/docker compose -f $curdir/compose-setup.yaml run -v cloud_$volume:/tmp/dist -v $curdir/backup/$volume/:/tmp/back --rm backup -a backup >> /var/log/backup.log" >> ./cron
+  echo "30 7 * * * /usr/bin/docker compose -f $curdir/compose-setup.yaml run -v cloud_$volume:/tmp/dist -v $curdir/backup/$volume/:/tmp/back --rm backup -a check >> /var/log/backup.log" >> ./cron
 done
 
 crontab ./cron
