@@ -5,11 +5,9 @@ volumes=( \
 "cloud-data" \
 "db-office-data" \
 "office-data" \
-"office-log" \
 "office-public" \
 "office-fonts" \
 "track-data" \
-"track-logs" \
 )
 
 for volume in "${volumes[@]}"; do
@@ -18,6 +16,9 @@ for volume in "${volumes[@]}"; do
   docker compose -f ./compose-setup.yaml run --build \
   -v "cloud_$volume":/tmp/dist \
   -v $(pwd)/backup/"$volume"/:/tmp/back --rm backup -a check
+
+  docker run --rm -v "cloud_$volume":/volume alpine chmod -R 770 /volume
+
 done
 
 docker compose -f ./compose-setup.yaml up -d nginx

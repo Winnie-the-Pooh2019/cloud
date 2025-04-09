@@ -6,7 +6,7 @@ services:
     container_name: db
     volumes:
       - type: volume
-        source: db-data
+        source: cloud_db-data
         target: /var/lib/postgresql/data
     environment:
       - POSTGRES_DB=${CLOUD_POSTGRES_DB}
@@ -60,7 +60,7 @@ services:
       - OVERWRITEHOST=cloud.duvanoff.su
     volumes:
       - type: volume
-        source: cloud-data
+        source: cloud_cloud-data
         target: /var/www/html
     networks:
       - cloud_network
@@ -90,7 +90,7 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
       - type: volume
-        source: db-office-data
+        source: cloud_db-office-data
         target: /var/lib/postgresql/data
     networks:
       - office-network
@@ -163,7 +163,7 @@ services:
       - WOPI_ENABLED=true
     volumes:
       - type: volume
-        source: office-data
+        source: cloud_office-data
         target: /var/www/onlyoffice/Data
       - type: volume
         source: office-log
@@ -172,10 +172,10 @@ services:
         source: office-cache
         target: /var/lib/onlyoffice/documentserver/App_Data/cache/files
       - type: volume
-        source: office-public
+        source: cloud_office-public
         target: /var/www/onlyoffice/documentserver-example/public/files
       - type: volume
-        source: office-fonts
+        source: cloud_office-fonts
         target: /usr/share/fonts
     networks:
       - office-network
@@ -198,7 +198,7 @@ services:
       - YT_BASE_URL=${TRACK_URL}
     volumes:
       - type: volume
-        source: track-data
+        source: cloud_track-data
         target: /opt/youtrack/data
       - type: volume
         source: track-logs
@@ -244,28 +244,28 @@ networks:
   nginx-network:
 
 volumes:
-  db-data:
-    driver: local
+  cloud_db-data:
+    external: true
   redis-data:
     driver: local
-  cloud-data:
-    driver: local
-  db-office-data:
-    driver: local
+  cloud_cloud-data:
+    external: true
+  cloud_db-office-data:
+    external: true
   redis-office-data:
     driver: local
-  office-data:
-    driver: local
+  cloud_office-data:
+    external: true
   office-log:
     driver: local
   office-cache:
     driver: local
-  office-public:
-    driver: local
-  office-fonts:
-    driver: local
-  track-data:
-    driver: local
+  cloud_office-public:
+    external: true
+  cloud_office-fonts:
+    external: true
+  cloud_track-data:
+    external: true
   track-logs:
     driver: local
   web-root:
