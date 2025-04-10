@@ -11,12 +11,12 @@ parser.add_argument("-a", "--action", required=True, help="What action should be
 parser.add_argument("-d", "--destination", required=True, help="Path to the destination folder.")
 parser.add_argument("-b", "--backup", required=True, help="Path to the backup folder.")
 parser.add_argument("-rm", "--removeold", required=False, help="Remove old files while restoring.")
-
-backup_folder = '/backup'
-dist_folder = '/dist'
-
-backup_folder_content = os.listdir(backup_folder)
-backup_entire_folders = [f for f in os.li]
+#
+# backup_folder = '/backup'
+# dist_folder = '/dist'
+#
+# backup_folder_content = os.listdir(backup_folder)
+# backup_entire_folders = [f for f in backup_folder_content if os.path.isdir(os.path.join(backup_folder))]
 
 args = parser.parse_args()
 action = args.action
