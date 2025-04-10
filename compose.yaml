@@ -1,9 +1,38 @@
 version: "3.8"
 
 services:
+  backup:
+    container_name: backup
+    build:
+      context: ./backup
+      dockerfile: ./Dockerfile
+    volumes:
+      - type: volume
+        source: db-data
+        target: /cloud/dist/db-data
+      - type: volume
+        source: cloud-data
+        target: /cloud/dist/cloud-data
+      - type: volume
+        source: db-office-data
+        target: /cloud/dist/db-office-data
+      - type: volume
+        source: office-data
+        target: /cloud/dist/office-data
+      - type: volume
+        source: office-public
+        target: /cloud/dist/office-public
+      - type: volume
+        source: office-fonts
+        target: /cloud/dist/office-fonts
+      - type: volume
+        source: track-data
+        target: /cloud/dist/track-data
+
   db:
     image: postgres
     container_name: db
+    user: '1000:1000'
     volumes:
       - type: volume
         source: cloud_db-data
@@ -46,6 +75,7 @@ services:
   cloud:
     image: nextcloud:latest
     container_name: cloud
+    user: '1000:1000'
     environment:
       - POSTGRES_HOST=db
       - POSTGRES_DB=${CLOUD_POSTGRES_DB}
@@ -84,6 +114,7 @@ services:
   db-office:
     image: postgres
     container_name: db-office
+    user: '1000:1000'
     environment:
       - POSTGRES_DB=${OFFICE_POSTGRES_DB}
       - POSTGRES_USER=${OFFICE_POSTGRES_USER}
@@ -145,6 +176,7 @@ services:
   office:
     image: onlyoffice/documentserver
     container_name: office
+    user: '1000:1000'
     environment:
       - DB_TYPE=postgres
       - DB_HOST=db-office
@@ -194,6 +226,7 @@ services:
   track:
     image: jetbrains/youtrack:2025.1.64291
     container_name: track
+    user: '1000:1000'
     environment:
       - YT_BASE_URL=${TRACK_URL}
     volumes:

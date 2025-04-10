@@ -13,11 +13,12 @@ volumes=( \
 for volume in "${volumes[@]}"; do
   echo "Restoring volume: $volume"
 
-  docker compose -f ./compose-setup.yaml run --build \
+  docker compose -f ./compose.yaml run --build \
   -v "cloud_$volume":/tmp/dist \
   -v $(pwd)/backup/"$volume"/:/tmp/back --rm backup -a check
 
-  docker run --rm -v "cloud_$volume":/volume alpine chmod -R 770 /volume
+  docker run --rm -v "cloud_$volume":/volume alpine chown -R 1000:1000 /volume
+  docker run --rm -v "cloud_$volume":/volume alpine chmod -R 755 /volume
 
 done
 
