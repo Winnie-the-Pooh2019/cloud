@@ -7,7 +7,7 @@ import argparse
 import zipfile
 
 parser = argparse.ArgumentParser(description="Copy files from source to destination.")
-parser.add_argument("-a", "--action", required=True, help="What action should be performed.")
+parser.add_argument("-a", "--action", required=False, help="What action should be performed.")
 parser.add_argument("-d", "--destination", required=True, help="Path to the destination folder.")
 parser.add_argument("-b", "--backup", required=True, help="Path to the backup folder.")
 parser.add_argument("-rm", "--removeold", required=False, help="Remove old files while restoring.")
@@ -224,6 +224,9 @@ try:
         restore(dist, bkp, remove_old)
         print('Restoring performed')
 
+    elif action is None:
+        print('No command provided... skiping')
+
     else:
         raise UnrecognizedCommandException
 
@@ -235,3 +238,5 @@ except IncorrectRestoreException:
     print('Unsuccessful restoring exception')
 except UnrecognizedCommandException:
     print('Unrecognized command... Exiting...')
+
+print()

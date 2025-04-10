@@ -9,33 +9,36 @@ services:
     volumes:
       - type: volume
         source: db-data
-        target: /cloud/dist/db-data
+        target: /dist/db-data
       - type: volume
         source: cloud-data
-        target: /cloud/dist/cloud-data
+        target: /dist/cloud-data
       - type: volume
         source: db-office-data
-        target: /cloud/dist/db-office-data
+        target: /dist/db-office-data
       - type: volume
         source: office-data
-        target: /cloud/dist/office-data
+        target: /dist/office-data
       - type: volume
         source: office-public
-        target: /cloud/dist/office-public
+        target: /dist/office-public
       - type: volume
         source: office-fonts
-        target: /cloud/dist/office-fonts
+        target: /dist/office-fonts
       - type: volume
         source: track-data
-        target: /cloud/dist/track-data
+        target: /dist/track-data
+
+      - type: bind
+        source: ./backup/out
+        target: /backup
 
   db:
     image: postgres
     container_name: db
-    user: '1000:1000'
     volumes:
       - type: volume
-        source: cloud_db-data
+        source: db-data
         target: /var/lib/postgresql/data
     environment:
       - POSTGRES_DB=${CLOUD_POSTGRES_DB}
@@ -75,7 +78,6 @@ services:
   cloud:
     image: nextcloud:latest
     container_name: cloud
-    user: '1000:1000'
     environment:
       - POSTGRES_HOST=db
       - POSTGRES_DB=${CLOUD_POSTGRES_DB}
@@ -90,7 +92,7 @@ services:
       - OVERWRITEHOST=cloud.duvanoff.su
     volumes:
       - type: volume
-        source: cloud_cloud-data
+        source: cloud-data
         target: /var/www/html
     networks:
       - cloud_network
@@ -114,14 +116,13 @@ services:
   db-office:
     image: postgres
     container_name: db-office
-    user: '1000:1000'
     environment:
       - POSTGRES_DB=${OFFICE_POSTGRES_DB}
       - POSTGRES_USER=${OFFICE_POSTGRES_USER}
       - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
       - type: volume
-        source: cloud_db-office-data
+        source: db-office-data
         target: /var/lib/postgresql/data
     networks:
       - office-network
@@ -176,7 +177,6 @@ services:
   office:
     image: onlyoffice/documentserver
     container_name: office
-    user: '1000:1000'
     environment:
       - DB_TYPE=postgres
       - DB_HOST=db-office
@@ -195,7 +195,7 @@ services:
       - WOPI_ENABLED=true
     volumes:
       - type: volume
-        source: cloud_office-data
+        source: office-data
         target: /var/www/onlyoffice/Data
       - type: volume
         source: office-log
@@ -204,10 +204,10 @@ services:
         source: office-cache
         target: /var/lib/onlyoffice/documentserver/App_Data/cache/files
       - type: volume
-        source: cloud_office-public
+        source: office-public
         target: /var/www/onlyoffice/documentserver-example/public/files
       - type: volume
-        source: cloud_office-fonts
+        source: office-fonts
         target: /usr/share/fonts
     networks:
       - office-network
@@ -226,12 +226,11 @@ services:
   track:
     image: jetbrains/youtrack:2025.1.64291
     container_name: track
-    user: '1000:1000'
     environment:
       - YT_BASE_URL=${TRACK_URL}
     volumes:
       - type: volume
-        source: cloud_track-data
+        source: track-data
         target: /opt/youtrack/data
       - type: volume
         source: track-logs
@@ -277,28 +276,28 @@ networks:
   nginx-network:
 
 volumes:
-  cloud_db-data:
-    external: true
+  db-data:
+    driver: local
   redis-data:
     driver: local
-  cloud_cloud-data:
-    external: true
-  cloud_db-office-data:
-    external: true
+  cloud-data:
+    driver: local
+  db-office-data:
+    driver: local
   redis-office-data:
     driver: local
-  cloud_office-data:
-    external: true
+  office-data:
+    driver: local
   office-log:
     driver: local
   office-cache:
     driver: local
-  cloud_office-public:
-    external: true
-  cloud_office-fonts:
-    external: true
-  cloud_track-data:
-    external: true
+  office-public:
+    driver: local
+  office-fonts:
+    driver: local
+  track-data:
+    driver: local
   track-logs:
     driver: local
   web-root:

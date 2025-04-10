@@ -1,6 +1,6 @@
-FROM ubuntu/python
+FROM python:3.8-slim
 
 WORKDIR /
 COPY . .
 
-ENTRYPOINT ["python", "main.py", "-d", "/tmp/dist", "-b", "/tmp/back"]
+ENTRYPOINT ["bash", "./run.sh", "-d", "/dist", "-b", "/backup"]
