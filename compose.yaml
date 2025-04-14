@@ -6,32 +6,11 @@ services:
     build:
       context: ./backup
       dockerfile: ./Dockerfile
-    volumes:
-      - type: volume
-        source: db-data
-        target: /dist/db-data
-      - type: volume
-        source: cloud-data
-        target: /dist/cloud-data
-      - type: volume
-        source: db-office-data
-        target: /dist/db-office-data
-      - type: volume
-        source: office-data
-        target: /dist/office-data
-      - type: volume
-        source: office-public
-        target: /dist/office-public
-      - type: volume
-        source: office-fonts
-        target: /dist/office-fonts
-      - type: volume
-        source: track-data
-        target: /dist/track-data
-
-      - type: bind
-        source: ./backup/out
-        target: /backup
+#    volumes:
+#
+#      - type: bind
+#        source: ./backup/out
+#        target: /backup
 
   db:
     image: postgres

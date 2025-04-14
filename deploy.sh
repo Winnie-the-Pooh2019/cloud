@@ -32,14 +32,14 @@ docker compose -f ./compose-setup.yaml down nginx
 
 echo "Initialize services"
 docker compose -f ./compose-setup.yaml run --rm php-config
-docker compose -f ./compose.yaml up -d
-echo "Sleeping for 60 seconds"
-sleep 60
-docker compose -f ./compose.yaml stop
-
-echo "Restoring volumes from backup"
-docker compose -f ./compose.yaml run --rm --build backup -c restore
-echo "Restoring complete"
+#docker compose -f ./compose.yaml up -d
+#echo "Sleeping for 60 seconds"
+#sleep 60
+#docker compose -f ./compose.yaml stop
+#
+#echo "Restoring volumes from backup"
+#docker compose -f ./compose.yaml run --rm --build backup -c restore
+#echo "Restoring complete"
 
 echo "Run services"
 docker compose -f ./compose.yaml up -d
@@ -48,6 +48,6 @@ curdir=$(pwd)
 
 echo "adding tasks to cron"
 echo "0 9 * * 1 /usr/bin/docker compose -f $curdir/compose-setup.yaml run --rm certbot renew >> /var/log/renew-ssl.log && /usr/bin/docker compose -f $(pwd)/compose.yaml kill -s SIGHUP nginx" > ./cron
-echo "30 7 * * * /usr/bin/docker compose -f $curdir/compose.yaml run --rm --build backup -a check >> /var/log/backup.log" >> ./cron
+#echo "30 7 * * * /usr/bin/docker compose -f $curdir/compose.yaml run --rm --build backup -a check >> /var/log/backup.log" >> ./cron
 
 crontab ./cron
