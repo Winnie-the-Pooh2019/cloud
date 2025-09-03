@@ -1,11 +1,11 @@
 version: "3.8"
 
 services:
-  backup:
-    container_name: backup
-    build:
-      context: ./backup
-      dockerfile: ./Dockerfile
+#  backup:
+#    container_name: backup
+#    build:
+#      context: ./backup
+#      dockerfile: ./Dockerfile
 #    volumes:
 #
 #      - type: bind
@@ -251,8 +251,11 @@ services:
 
 networks:
   cloud_network:
+    driver: bridge
   office-network:
+    driver: bridge
   nginx-network:
+    driver: bridge
 
 volumes:
   db-data:

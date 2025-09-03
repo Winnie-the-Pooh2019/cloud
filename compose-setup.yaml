@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  nginx:
+  nginx-setup:
     image: nginx:latest
-    container_name: nginx
+    container_name: nginx-setup
     ports:
       - '80:80'
     volumes:
