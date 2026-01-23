@@ -202,23 +202,23 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  track:
-    image: jetbrains/youtrack:2025.1.64291
-    container_name: track
-    environment:
-      - YT_BASE_URL=${TRACK_URL}
-    volumes:
-      - type: volume
-        source: track-data
-        target: /opt/youtrack/data
-      - type: volume
-        source: track-logs
-        target: /opt/youtrack/logs
-    networks:
-      - nginx-network
-    ports:
-      - '8080:8080'
-    restart: unless-stopped
+#  track:
+#    image: jetbrains/youtrack:2025.1.64291
+#    container_name: track
+#    environment:
+#      - YT_BASE_URL=${TRACK_URL}
+#    volumes:
+#      - type: volume
+#        source: track-data
+#        target: /opt/youtrack/data
+#      - type: volume
+#        source: track-logs
+#        target: /opt/youtrack/logs
+#    networks:
+#      - nginx-network
+#    ports:
+#      - '8080:8080'
+#    restart: unless-stopped
 
   nginx:
     image: nginx:latest
