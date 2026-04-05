@@ -16,7 +16,7 @@ echo "Initialize services"
 docker compose -f ./compose-setup.yaml run --rm php-config
 
 echo "Run services"
-docker compose -f ./taigaio.yaml up -d
+#docker compose -f ./taigaio.yaml up -d
 docker compose -f ./docmost.yaml up -d
 docker compose -f ./compose.yaml up -d
 
