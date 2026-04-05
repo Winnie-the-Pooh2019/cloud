@@ -1,0 +1,52 @@
+version: '3'
+
+services:
+  docmost:
+    image: docmost/docmost:latest
+    depends_on:
+      - db
+      - redis
+    environment:
+      APP_URL: '${DOCMOST_DOMAIN}'
+      APP_SECRET: '${DOCMOST_SECRET}'
+      DATABASE_URL: 'postgresql://${DOCMOST_DB_USER}:${DOCMOST_DB_PASSWORD}@db:5432/${DOCMOST_DB_NAME}?schema=public'
+      REDIS_URL: 'redis://redis:6379'
+    expose:
+      - '3000'
+    restart: unless-stopped
+    volumes:
+      - docmost_data:/app/data/storage
+    networks:
+      - docmost
+      - nginx-external
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DOCMOST_DB_NAME}
+      POSTGRES_USER: ${DOCMOST_DB_USER}
+      POSTGRES_PASSWORD: ${DOCMOST_DB_PASSWORD}
+    restart: unless-stopped
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - docmost
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - docmost
+
+volumes:
+  docmost_data:
+  db_data:
+  redis_data:
+
+networks:
+  docmost:
+  nginx-external:
+    external: true
+    name: cloud_nginx-network
