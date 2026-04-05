@@ -2,6 +2,8 @@
 
 echo "Stopping containers"
 docker compose -f ./compose.yaml stop
+docker compose -f ./docmost.yaml stop
+docker compose -f ./taiga.yaml stop
 
 echo "Setting up certificates"
 docker compose -f ./compose-setup.yaml up -d nginx-setup
