@@ -1,0 +1,33 @@
+version: '3.8'
+
+name: cloud
+
+services:
+  track:
+    image: jetbrains/youtrack:2025.1.64291
+    container_name: track
+    environment:
+      - YT_BASE_URL=${TRACK_URL}
+    volumes:
+      - type: volume
+        source: track-data
+        target: /opt/youtrack/data
+      - type: volume
+        source: track-logs
+        target: /opt/youtrack/logs
+    networks:
+      - nginx-network
+    ports:
+      - '8080:8080'
+    restart: unless-stopped
+
+volumes:
+  track-data:
+    driver: local
+  track-logs:
+    driver: local
+
+networks:
+  nginx-network:
+    external: true
+    name: cloud_nginx-network

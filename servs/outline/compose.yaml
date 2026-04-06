@@ -1,12 +1,15 @@
 version: '3.8'
 
+name: cloud
+
 services:
   outline:
     image: outlinewiki/outline:latest
+    container_name: outline
     depends_on:
-      db:
+      outline-db:
         condition: service_healthy
-      redis:
+      outline-redis:
         condition: service_healthy
     environment:
       SECRET_KEY: ${OUTLINE_SECRET_KEY}
@@ -34,8 +37,9 @@ services:
       - outline
       - nginx-external
 
-  db:
+  outline-db:
     image: postgres:16-alpine
+    container_name: outline-db
     environment:
       POSTGRES_DB: ${OUTLINE_DB_NAME}
       POSTGRES_USER: ${OUTLINE_DB_USER}
@@ -56,8 +60,9 @@ services:
     expose:
       - '5432'
 
-  redis:
+  outline-redis:
     image: redis:7.2-alpine
+    container_name: outline-redis
     restart: unless-stopped
     volumes:
       - type: volume

@@ -1,0 +1,6 @@
+cloud.duvanoff.su
+office.duvanoff.su
+taiga.duvanoff.su
+doc.duvanoff.su
+out.doc.duvanoff.su
+duvanoff.su
