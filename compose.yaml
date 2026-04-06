@@ -1,7 +1,3 @@
-version: "3.8"
-
-name: cloud
-
 services:
   nginx:
     image: nginx:latest
@@ -27,9 +23,6 @@ services:
       - type: volume
         source: certbot-var
         target: /var/lib/letsencrypt
-    depends_on:
-      office:
-        condition: service_started
     restart: unless-stopped
 
 networks:
@@ -39,7 +32,10 @@ networks:
 volumes:
   web-root:
     driver: local
+    name: cloud_web-root
   certbot-etc:
     driver: local
+    name: cloud_certbot-etc
   certbot-var:
     driver: local
+    name: cloud_certbot-var

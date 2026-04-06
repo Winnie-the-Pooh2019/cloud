@@ -1,7 +1,3 @@
-version: '3.8'
-
-name: cloud
-
 services:
   docmost:
     image: docmost/docmost:latest
@@ -72,10 +68,13 @@ services:
 volumes:
   docmost-data:
     driver: local
+    name: cloud_docmost-data
   docmost-db-data:
     driver: local
+    name: cloud_docmost-db-data
   docmost-redis-data:
     driver: local
+    name: cloud_docmost-redis-data
 
 networks:
   docmost:

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   nginx-setup:
     image: nginx:latest
@@ -57,9 +55,13 @@ services:
 volumes:
   cloud-data:
     driver: local
+    name: cloud_cloud-data
   certbot-etc:
     driver: local
+    name: cloud_certbot-etc
   certbot-var:
     driver: local
+    name: cloud_certbot-var
   web-root:
     driver: local
+    name: cloud_web-root

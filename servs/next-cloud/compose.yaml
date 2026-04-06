@@ -1,7 +1,3 @@
-version: "3.8"
-
-name: cloud
-
 services:
   cloud-db:
     image: postgres
@@ -155,7 +151,7 @@ services:
       - DB_USER=${OFFICE_POSTGRES_USER}
       - DB_PWD=${OFFICE_POSTGRES_PASSWORD}
       - AMQP_TYPE=rabbitmq
-      - AMQP_URI=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@office-rabbitmq
+      - AMQP_URI=amqp://${OFFICE_RABBITMQ_USER}:${OFFICE_RABBITMQ_PASSWORD}@office-rabbitmq
       - REDIS_SERVER_HOST=office-redis
       - REDIS_SERVER_PORT=6379
       - JWT_ENABLED=true
@@ -204,26 +200,32 @@ networks:
 
 volumes:
   db-data:
-    driver: local
+    name: cloud_db-data
+    external: true
   redis-data:
-    driver: local
+    name: cloud_redis-data
+    external: true
   cloud-data:
-    driver: local
+    name: cloud_cloud-data
+    external: true
   db-office-data:
-    driver: local
+    name: cloud_db-office-data
+    external: true
   redis-office-data:
-    driver: local
+    name: cloud_redis-office-data
+    external: true
   office-data:
-    driver: local
+    name: cloud_office-data
+    external: true
   office-log:
-    driver: local
+    name: cloud_office-log
+    external: true
   office-cache:
-    driver: local
+    name: cloud_office-cache
+    external: true
   office-public:
-    driver: local
+    name: cloud_office-public
+    external: true
   office-fonts:
-    driver: local
-  track-data:
-    driver: local
-  track-logs:
-    driver: local
+    name: cloud_office-fonts
+    external: true

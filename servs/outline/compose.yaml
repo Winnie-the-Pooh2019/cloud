@@ -1,7 +1,3 @@
-version: '3.8'
-
-name: cloud
-
 services:
   outline:
     image: outlinewiki/outline:latest
@@ -14,8 +10,9 @@ services:
     environment:
       SECRET_KEY: ${OUTLINE_SECRET_KEY}
       UTILS_SECRET: ${OUTLINE_UTILS_SECRET}
-      DATABASE_URL: postgres://${OUTLINE_DB_USER}:${OUTLINE_DB_PASSWORD}@db:5432/${OUTLINE_DB_NAME}
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgres://${OUTLINE_DB_USER}:${OUTLINE_DB_PASSWORD}@outline-db:5432/${OUTLINE_DB_NAME}
+      PGSSLMODE: disable
+      REDIS_URL: redis://outline-redis:6379
       URL: ${OUTLINE_URL}
       PORT: 3000
       FILE_STORAGE: local
@@ -82,13 +79,17 @@ services:
 volumes:
   outline-data:
     driver: local
+    name: cloud_outline-data
   outline-db-data:
     driver: local
+    name: cloud_outline-db-data
   outline-redis-data:
     driver: local
+    name: cloud_outline-redis-data
 
 networks:
   outline:
+    driver: bridge
   nginx-external:
     external: true
     name: cloud_nginx-network
