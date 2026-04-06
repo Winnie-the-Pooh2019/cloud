@@ -3,6 +3,7 @@
 echo "Stopping containers"
 docker compose -f ./compose.yaml stop
 docker compose -f ./docmost.yaml stop
+docker compose -f ./outline.yaml stop
 docker compose -f ./taigaio.yaml stop
 
 echo "Setting up certificates"
