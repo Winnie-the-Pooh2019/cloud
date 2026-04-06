@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  outline:
+    image: outlinewiki/outline:latest
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SECRET_KEY: ${OUTLINE_SECRET_KEY}
+      UTILS_SECRET: ${OUTLINE_UTILS_SECRET}
+      DATABASE_URL: postgres://${OUTLINE_DB_USER}:${OUTLINE_DB_PASSWORD}@db:5432/${OUTLINE_DB_NAME}
+      REDIS_URL: redis://redis:6379
+      URL: ${OUTLINE_URL}
+      PORT: 3000
+      FILE_STORAGE: local
+      SMTP_HOST: ${OUTLINE_SMTP_HOST}
+      SMTP_PORT: ${OUTLINE_SMTP_PORT}
+      SMTP_USERNAME: ${OUTLINE_SMTP_USERNAME}
+      SMTP_PASSWORD: ${OUTLINE_SMTP_PASSWORD}
+      SMTP_FROM_EMAIL: ${OUTLINE_SMTP_FROM_EMAIL}
+      SMTP_REPLY_EMAIL: ${OUTLINE_SMTP_REPLY_EMAIL}
+      SMTP_SECURE: ${OUTLINE_SMTP_SECURE}
+    expose:
+      - '3000'
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: outline-data
+        target: /var/lib/outline/data
+    networks:
+      - outline
+      - nginx-external
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${OUTLINE_DB_NAME}
+      POSTGRES_USER: ${OUTLINE_DB_USER}
+      POSTGRES_PASSWORD: ${OUTLINE_DB_PASSWORD}
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: outline-db-data
+        target: /var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "${OUTLINE_DB_NAME}", "-U", "${OUTLINE_DB_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - outline
+    expose:
+      - '5432'
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: outline-redis-data
+        target: /data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - outline
+    expose:
+      - '6379'
+
+volumes:
+  outline-data:
+    driver: local
+  outline-db-data:
+    driver: local
+  outline-redis-data:
+    driver: local
+
+networks:
+  outline:
+  nginx-external:
+    external: true
+    name: cloud_nginx-network
