@@ -42,13 +42,74 @@ is_service_running() {
 #}
 
 
+is_nginx_running() {
+    docker compose -f "$SCRIPT_DIR/compose.yaml" ps --status running --quiet nginx 2>/dev/null | grep -q .
+}
+
 reload_nginx() {
-    if docker compose -f "$SCRIPT_DIR/compose.yaml" ps --status running --quiet nginx 2>/dev/null | grep -q .; then
+    if is_nginx_running; then
         docker compose -f "$SCRIPT_DIR/compose.yaml" exec -T nginx nginx -s reload
         echo "  ✓ nginx перезагружен"
     else
         echo "  ⚠ nginx не запущен, пропускаю перезагрузку"
     fi
+}
+
+cmd_nginx() {
+    local action="${1:-}"
+    case "$action" in
+        start)
+            echo "Запускаю nginx..."
+            docker compose -f "$SCRIPT_DIR/compose.yaml" up -d
+            echo "nginx запущен"
+            ;;
+        stop)
+            echo "Останавливаю nginx..."
+            docker compose -f "$SCRIPT_DIR/compose.yaml" stop nginx
+            echo "nginx остановлен"
+            ;;
+        down)
+            echo "Удаляю nginx..."
+            docker compose -f "$SCRIPT_DIR/compose.yaml" down
+            echo "nginx удалён"
+            ;;
+        reload)
+            reload_nginx
+            ;;
+        *)
+            echo "Использование: $0 nginx [start|stop|down|reload]"
+            return 1
+            ;;
+    esac
+}
+
+# ─── Справка ────────────────────────────────────────────────────────────────
+
+cmd_help() {
+    echo ""
+    echo "Использование: $(basename "$0") <команда> [аргументы]"
+    echo ""
+    echo "Управление сервисами:"
+    echo "  start <сервис...>   Запустить один или несколько сервисов"
+    echo "  start --all         Запустить все сервисы"
+    echo "  stop  <сервис...>   Остановить один или несколько сервисов"
+    echo "  stop  --all         Остановить все сервисы"
+    echo "  down  <сервис...>   Остановить и удалить контейнеры сервиса"
+    echo "  down  --all         Остановить и удалить все сервисы"
+    echo ""
+    echo "Управление nginx:"
+    echo "  nginx start         Запустить nginx"
+    echo "  nginx stop          Остановить nginx"
+    echo "  nginx down          Остановить и удалить контейнер nginx"
+    echo "  nginx reload        Перезагрузить конфигурацию nginx"
+    echo ""
+    echo "Информация:"
+    echo "  status              Статус всех сервисов и nginx"
+    echo "  list                Список доступных сервисов"
+    echo "  help                Показать эту справку"
+    echo ""
+    echo "Без аргументов запускается интерактивное меню."
+    echo ""
 }
 
 # ─── Команды ────────────────────────────────────────────────────────────────
@@ -64,6 +125,11 @@ cmd_list() {
 cmd_status() {
     echo ""
     echo "Статус сервисов:"
+    if is_nginx_running; then
+        echo "  ● nginx  [запущен]"
+    else
+        echo "  ○ nginx  [остановлен]"
+    fi
     while IFS= read -r service; do
         if is_service_running "$service"; then
             echo "  ● $service  [запущен]"
@@ -270,6 +336,9 @@ show_menu() {
         echo "  3) Запустить сервис"
         echo "  4) Остановить сервис"
         echo "  5) Down сервис"
+        echo "  6) Запустить nginx"
+        echo "  7) Остановить nginx"
+        echo "  8) Перезагрузить nginx"
         echo "  0) Выход"
         echo ""
         read -rp "Выберите действие: " choice
@@ -280,6 +349,9 @@ show_menu() {
             3) menu_start ;;
             4) menu_stop ;;
             5) menu_down ;;
+            6) cmd_nginx start ;;
+            7) cmd_nginx stop ;;
+            8) cmd_nginx reload ;;
             0) exit 0 ;;
             *) echo "Неверный выбор" ;;
         esac
@@ -313,11 +385,14 @@ case "${1:-}" in
             for service in "$@"; do cmd_down "$service"; done
         fi
         ;;
+    nginx)  shift; cmd_nginx "$@" ;;
     status) cmd_status ;;
     list)   cmd_list ;;
+    help)   cmd_help ;;
     "")     show_menu ;;
     *)
-        echo "Использование: $0 [start|stop|down|status|list] [--all | сервис...]"
+        echo "Неизвестная команда: '$1'"
+        echo "Запустите '$(basename "$0") help' для справки."
         exit 1
         ;;
 esac
