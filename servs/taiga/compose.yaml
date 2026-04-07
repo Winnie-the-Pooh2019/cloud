@@ -157,18 +157,18 @@ services:
 
 volumes:
   taiga-static-data:
-    name: cloud_taiga-static-data
+    name: ${COMMON_NAME}_taiga-static-data
   taiga-media-data:
-    name: cloud_taiga-media-data
+    name: ${COMMON_NAME}_taiga-media-data
   taiga-db-data:
-    name: cloud_taiga-db-data
+    name: ${COMMON_NAME}_taiga-db-data
   taiga-async-rabbitmq-data:
-    name: cloud_taiga-async-rabbitmq-data
+    name: ${COMMON_NAME}_taiga-async-rabbitmq-data
   taiga-events-rabbitmq-data:
-    name: cloud_taiga-events-rabbitmq-data
+    name: ${COMMON_NAME}_taiga-events-rabbitmq-data
 
 networks:
   taiga:
   nginx-external:
     external: true
-    name: cloud_nginx-network
+    name: ${COMMON_NAME}_nginx-network

@@ -1,4 +1,24 @@
 services:
+  cloud-config:
+    image: alpine:latest
+    container_name: cloud-config
+    volumes:
+      - type: bind
+        source: ../../php/config.php
+        target: /source/config.php
+      - type: volume
+        source: cloud-data
+        target: /var/www/html
+    command: >
+      sh -c "
+        mkdir -p /var/www/html/config &&
+        if [ ! -f /var/www/html/config/config.php ]; then
+          cat /source/config.php >> /var/www/html/config/config.php &&
+          echo 'config.php создан';
+        fi
+      "
+    restart: "no"
+
   cloud-db:
     image: postgres
     container_name: cloud-db
@@ -73,6 +93,8 @@ services:
       retries: 3
       start_period: 90s
     depends_on:
+      cloud-config:
+        condition: service_completed_successfully
       cloud-db:
         condition: service_healthy
       cloud-redis:
@@ -196,36 +218,26 @@ networks:
     driver: bridge
   nginx-network:
     external: true
-    name: cloud_nginx-network
+    name: ${COMMON_NAME}_nginx-network
 
 volumes:
   db-data:
-    name: cloud_db-data
-    external: true
+    name: ${COMMON_NAME}_db-data
   redis-data:
-    name: cloud_redis-data
-    external: true
+    name: ${COMMON_NAME}_redis-data
   cloud-data:
-    name: cloud_cloud-data
-    external: true
+    name: ${COMMON_NAME}_cloud-data
   db-office-data:
-    name: cloud_db-office-data
-    external: true
+    name: ${COMMON_NAME}_db-office-data
   redis-office-data:
-    name: cloud_redis-office-data
-    external: true
+    name: ${COMMON_NAME}_redis-office-data
   office-data:
-    name: cloud_office-data
-    external: true
+    name: ${COMMON_NAME}_office-data
   office-log:
-    name: cloud_office-log
-    external: true
+    name: ${COMMON_NAME}_office-log
   office-cache:
-    name: cloud_office-cache
-    external: true
+    name: ${COMMON_NAME}_office-cache
   office-public:
-    name: cloud_office-public
-    external: true
+    name: ${COMMON_NAME}_office-public
   office-fonts:
-    name: cloud_office-fonts
-    external: true
+    name: ${COMMON_NAME}_office-fonts

@@ -67,17 +67,14 @@ services:
 
 volumes:
   docmost-data:
-    driver: local
-    name: cloud_docmost-data
+    name: ${COMMON_NAME}_docmost-data
   docmost-db-data:
-    driver: local
-    name: cloud_docmost-db-data
+    name: ${COMMON_NAME}_docmost-db-data
   docmost-redis-data:
-    driver: local
-    name: cloud_docmost-redis-data
+    name: ${COMMON_NAME}_docmost-redis-data
 
 networks:
   docmost:
   nginx-external:
     external: true
-    name: cloud_nginx-network
+    name: ${COMMON_NAME}_nginx-network

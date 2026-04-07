@@ -28,14 +28,15 @@ services:
 networks:
   nginx-network:
     driver: bridge
+    name: ${COMMON_NAME}_nginx-network
 
 volumes:
   web-root:
     driver: local
-    name: cloud_web-root
+    name: ${COMMON_NAME}_web-root
   certbot-etc:
     driver: local
-    name: cloud_certbot-etc
+    name: ${COMMON_NAME}_certbot-etc
   certbot-var:
     driver: local
-    name: cloud_certbot-var
+    name: ${COMMON_NAME}_certbot-var

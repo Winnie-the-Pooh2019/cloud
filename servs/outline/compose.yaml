@@ -79,17 +79,17 @@ services:
 volumes:
   outline-data:
     driver: local
-    name: cloud_outline-data
+    name: ${COMMON_NAME}_outline-data
   outline-db-data:
     driver: local
-    name: cloud_outline-db-data
+    name: ${COMMON_NAME}_outline-db-data
   outline-redis-data:
     driver: local
-    name: cloud_outline-redis-data
+    name: ${COMMON_NAME}_outline-redis-data
 
 networks:
   outline:
     driver: bridge
   nginx-external:
     external: true
-    name: cloud_nginx-network
+    name: ${COMMON_NAME}_nginx-network

@@ -20,12 +20,12 @@ services:
 volumes:
   track-data:
     driver: local
-    name: cloud_track-data
+    name: ${COMMON_NAME}_track-data
   track-logs:
     driver: local
-    name: cloud_track-logs
+    name: ${COMMON_NAME}_track-logs
 
 networks:
   nginx-network:
     external: true
-    name: cloud_nginx-network
+    name: ${COMMON_NAME}_nginx-network
