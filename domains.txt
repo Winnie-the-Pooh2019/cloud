@@ -4,3 +4,4 @@ taiga.duvanoff.su
 doc.duvanoff.su
 out.doc.duvanoff.su
 duvanoff.su
+mag.duvanoff.su

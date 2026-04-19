@@ -1,0 +1,80 @@
+services:
+  docmost-mag:
+    image: docmost/docmost:latest
+    container_name: docmost-mag
+    depends_on:
+      docmost-mag-db:
+        condition: service_healthy
+      docmost-mag-redis:
+        condition: service_healthy
+    environment:
+      APP_URL: '${DOCMOST_DOMAIN}'
+      APP_SECRET: '${DOCMOST_SECRET}'
+      DATABASE_URL: 'postgresql://${DOCMOST_DB_USER}:${DOCMOST_DB_PASSWORD}@docmost-mag-db:5432/${DOCMOST_DB_NAME}?schema=public'
+      REDIS_URL: 'redis://docmost-mag-redis:6379'
+    expose:
+      - '3000'
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: docmost-mag-data
+        target: /app/data/storage
+    networks:
+      - docmost-mag
+      - nginx-external
+
+  docmost-mag-db:
+    image: postgres:16-alpine
+    container_name: docmost-mag-db
+    environment:
+      POSTGRES_DB: ${DOCMOST_DB_NAME}
+      POSTGRES_USER: ${DOCMOST_DB_USER}
+      POSTGRES_PASSWORD: ${DOCMOST_DB_PASSWORD}
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: docmost-mag-db-data
+        target: /var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "${DOCMOST_DB_NAME}", "-U", "${DOCMOST_DB_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - docmost-mag
+    expose:
+      - '5432'
+
+  docmost-mag-redis:
+    image: redis:7.2-alpine
+    container_name: docmost-mag-redis
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: docmost-mag-redis-data
+        target: /data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - docmost-mag
+    expose:
+      - '6379'
+
+volumes:
+  docmost-mag-data:
+    name: ${COMMON_NAME}_docmost-mag-data
+  docmost-mag-db-data:
+    name: ${COMMON_NAME}_docmost-mag-db-data
+  docmost-mag-redis-data:
+    name: ${COMMON_NAME}_docmost-mag-redis-data
+
+networks:
+  docmost-mag:
+  nginx-external:
+    external: true
+    name: ${COMMON_NAME}_nginx-network
