@@ -2,11 +2,12 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVS_DIR="$SCRIPT_DIR/servs"
-NGINX_CONF="$SCRIPT_DIR/nginx/prod/conf.d"
-NGINX_SETUP="$SCRIPT_DIR/nginx/setup/conf.d"
+
+[ -f "$SCRIPT_DIR/.env" ] && . "$SCRIPT_DIR/.env"
 
 PROJECT_NAME="cloud"
 START_BUILD=false
+MODE="prod"   # prod | internal
 
 # ─── Утилиты ────────────────────────────────────────────────────────────────
 
@@ -27,9 +28,53 @@ get_available_services() {
     find "$SERVS_DIR" -mindepth 1 -maxdepth 1 -type d | xargs -I{} basename {} | sort
 }
 
+get_nginx_network_name() {
+    echo "${COMMON_NAME}_nginx-network"
+}
+
+ensure_nginx_network() {
+    local net
+    net=$(get_nginx_network_name)
+    if ! docker network inspect "$net" >/dev/null 2>&1; then
+        echo "  ⤴ создаю сеть '$net'..."
+        docker network create "$net" >/dev/null
+        echo "  ✓ сеть '$net' создана"
+    fi
+}
+
+# ─── Режимо-зависимые функции ────────────────────────────────────────────────
+
+get_nginx_conf_dir() {
+    if [ "$MODE" = "internal" ]; then
+        echo "$SCRIPT_DIR/nginx/internal/conf.d"
+    else
+        echo "$SCRIPT_DIR/nginx/prod/conf.d"
+    fi
+}
+
+get_nginx_setup_dir() {
+    echo "$SCRIPT_DIR/nginx/setup/conf.d"
+}
+
+get_root_compose() {
+    if [ "$MODE" = "internal" ]; then
+        echo "$SCRIPT_DIR/compose-internal.yaml"
+    else
+        echo "$SCRIPT_DIR/compose.yaml"
+    fi
+}
+
+get_nginx_container() {
+    if [ "$MODE" = "internal" ]; then
+        echo "nginx-internal"
+    else
+        echo "nginx"
+    fi
+}
+
 is_service_running() {
     local service_name="$1"
-    [ -f "$NGINX_CONF/$service_name.conf" ]
+    [ -f "$(get_nginx_conf_dir)/$service_name.conf" ]
 }
 
 #is_service_running() {
@@ -44,12 +89,16 @@ is_service_running() {
 
 
 is_nginx_running() {
-    docker compose -f "$SCRIPT_DIR/compose.yaml" ps --status running --quiet nginx 2>/dev/null | grep -q .
+    local container
+    container=$(get_nginx_container)
+    docker compose -f "$(get_root_compose)" ps --status running --quiet "$container" 2>/dev/null | grep -q .
 }
 
 reload_nginx() {
     if is_nginx_running; then
-        docker compose -f "$SCRIPT_DIR/compose.yaml" exec -T nginx nginx -s reload
+        local container
+        container=$(get_nginx_container)
+        docker compose -f "$(get_root_compose)" exec -T "$container" nginx -s reload
         echo "  ✓ nginx перезагружен"
     else
         echo "  ⚠ nginx не запущен, пропускаю перезагрузку"
@@ -58,20 +107,25 @@ reload_nginx() {
 
 cmd_nginx() {
     local action="${1:-}"
+    local root_compose
+    root_compose=$(get_root_compose)
+    local container
+    container=$(get_nginx_container)
     case "$action" in
         start)
+            ensure_nginx_network
             echo "Запускаю nginx..."
-            docker compose -f "$SCRIPT_DIR/compose.yaml" up -d
+            docker compose -f "$root_compose" up -d
             echo "nginx запущен"
             ;;
         stop)
             echo "Останавливаю nginx..."
-            docker compose -f "$SCRIPT_DIR/compose.yaml" stop nginx
+            docker compose -f "$root_compose" stop "$container"
             echo "nginx остановлен"
             ;;
         down)
             echo "Удаляю nginx..."
-            docker compose -f "$SCRIPT_DIR/compose.yaml" down
+            docker compose -f "$root_compose" down
             echo "nginx удалён"
             ;;
         reload)
@@ -90,17 +144,27 @@ cmd_help() {
     echo ""
     echo "Использование: $(basename "$0") <команда> [аргументы]"
     echo ""
-    echo "Управление сервисами:"
+    echo "Управление сервисами (prod-режим, HTTPS + домен):"
     echo "  start <сервис...>              Запустить один или несколько сервисов"
     echo "  start --all                    Запустить все сервисы"
     echo "  start --build <сервис...>      Пересобрать образы и запустить"
     echo "  start --build --all            Пересобрать образы и запустить все"
-    echo "  stop  <сервис...>   Остановить один или несколько сервисов"
-    echo "  stop  --all         Остановить все сервисы"
-    echo "  down  <сервис...>   Остановить и удалить контейнеры сервиса"
-    echo "  down  --all         Остановить и удалить все сервисы"
+    echo "  stop  <сервис...>              Остановить один или несколько сервисов"
+    echo "  stop  --all                    Остановить все сервисы"
+    echo "  down  <сервис...>              Остановить и удалить контейнеры сервиса"
+    echo "  down  --all                    Остановить и удалить все сервисы"
     echo ""
-    echo "Управление nginx:"
+    echo "Internal-режим (HTTP, без SSL, path-роутинг по одному IP):"
+    echo "  internal start [--build] <сервис...>   Запустить в internal-режиме"
+    echo "  internal start [--build] --all         Запустить все"
+    echo "  internal stop  <сервис...>             Остановить"
+    echo "  internal down  <сервис...>             Удалить контейнеры"
+    echo "  internal nginx start|stop|down|reload  Управление internal nginx"
+    echo "  internal status                        Статус сервисов в internal"
+    echo "  internal list                          Список сервисов"
+    echo "  Конфиги сервиса: servs/<name>/internal/nginx.conf и internal/.env"
+    echo ""
+    echo "Управление nginx (prod):"
     echo "  nginx start         Запустить nginx"
     echo "  nginx stop          Остановить nginx"
     echo "  nginx down          Остановить и удалить контейнер nginx"
@@ -111,7 +175,7 @@ cmd_help() {
     echo "  list                Список доступных сервисов"
     echo "  help                Показать эту справку"
     echo ""
-    echo "Без аргументов запускается интерактивное меню."
+    echo "Без аргументов запускается интерактивное меню (prod-режим)."
     echo ""
 }
 
@@ -126,8 +190,10 @@ cmd_list() {
 }
 
 cmd_status() {
+    local mode_label="prod"
+    [ "$MODE" = "internal" ] && mode_label="internal"
     echo ""
-    echo "Статус сервисов:"
+    echo "Статус сервисов [$mode_label]:"
     if is_nginx_running; then
         echo "  ● nginx  [запущен]"
     else
@@ -166,25 +232,39 @@ cmd_start() {
 
     echo "Запускаю '$service_name'..."
 
-    if [ -f "$service_dir/nginx.conf" ]; then
-        cp "$service_dir/nginx.conf" "$NGINX_CONF/$service_name.conf"
+    ensure_nginx_network
+
+    # Выбор nginx-конфига: internal/ имеет приоритет в internal-режиме
+    local nginx_src="$service_dir/nginx.conf"
+    local env_src="$service_dir/.env"
+    if [ "$MODE" = "internal" ]; then
+        [ -f "$service_dir/internal/nginx.conf" ] && nginx_src="$service_dir/internal/nginx.conf"
+        [ -f "$service_dir/internal/.env" ] && env_src="$service_dir/internal/.env"
+    fi
+
+    local nginx_conf_dir
+    nginx_conf_dir=$(get_nginx_conf_dir)
+
+    if [ -f "$nginx_src" ]; then
+        cp "$nginx_src" "$nginx_conf_dir/$service_name.conf"
         echo "  ✓ nginx.conf скопирован"
     fi
 
-    if [ -f "$service_dir/acme.conf" ]; then
-        cp "$service_dir/acme.conf" "$NGINX_SETUP/$service_name.conf"
+    # acme.conf — только в prod-режиме
+    if [ "$MODE" = "prod" ] && [ -f "$service_dir/acme.conf" ]; then
+        cp "$service_dir/acme.conf" "$(get_nginx_setup_dir)/$service_name.conf"
         echo "  ✓ acme.conf скопирован"
     fi
 
     local env_arg=()
-    [ -f "$service_dir/.env" ] && env_arg=(--env-file "$service_dir/.env")
+    [ -f "$env_src" ] && env_arg=(--env-file "$env_src")
 
     local up_args=(-d --remove-orphans)
     [ "$START_BUILD" = true ] && up_args+=(--build)
 
     if ! docker compose -f "$compose_file" "${env_arg[@]}" up "${up_args[@]}"; then
-        rm -f "$NGINX_CONF/$service_name.conf"
-        rm -f "$NGINX_SETUP/$service_name.conf"
+        rm -f "$nginx_conf_dir/$service_name.conf"
+        rm -f "$(get_nginx_setup_dir)/$service_name.conf"
         echo "Ошибка запуска '$service_name', конфиги откатаны"
         return 1
     fi
@@ -212,16 +292,23 @@ cmd_stop() {
 
     echo "Останавливаю '$service_name'..."
 
+    local env_src="$service_dir/.env"
+    [ "$MODE" = "internal" ] && [ -f "$service_dir/internal/.env" ] && env_src="$service_dir/internal/.env"
+
     local env_arg=()
-    [ -f "$service_dir/.env" ] && env_arg=(--env-file "$service_dir/.env")
+    [ -f "$env_src" ] && env_arg=(--env-file "$env_src")
 
     docker compose -f "$compose_file" "${env_arg[@]}" stop
 
-    rm -f "$NGINX_CONF/$service_name.conf"
+    local nginx_conf_dir
+    nginx_conf_dir=$(get_nginx_conf_dir)
+    rm -f "$nginx_conf_dir/$service_name.conf"
     echo "  ✓ nginx.conf удалён"
 
-    rm -f "$NGINX_SETUP/$service_name.conf"
-    echo "  ✓ acme.conf удалён"
+    if [ "$MODE" = "prod" ]; then
+        rm -f "$(get_nginx_setup_dir)/$service_name.conf"
+        echo "  ✓ acme.conf удалён"
+    fi
 
     reload_nginx
     echo "Сервис '$service_name' остановлен"
@@ -245,16 +332,23 @@ cmd_down() {
         echo "Сервис '$service_name' не запущен, выполняю down для очистки..."
     fi
 
+    local env_src="$service_dir/.env"
+    [ "$MODE" = "internal" ] && [ -f "$service_dir/internal/.env" ] && env_src="$service_dir/internal/.env"
+
     local env_arg=()
-    [ -f "$service_dir/.env" ] && env_arg=(--env-file "$service_dir/.env")
+    [ -f "$env_src" ] && env_arg=(--env-file "$env_src")
 
     docker compose -f "$compose_file" "${env_arg[@]}" down --remove-orphans
 
-    rm -f "$NGINX_CONF/$service_name.conf"
+    local nginx_conf_dir
+    nginx_conf_dir=$(get_nginx_conf_dir)
+    rm -f "$nginx_conf_dir/$service_name.conf"
     echo "  ✓ nginx.conf удалён"
 
-    rm -f "$NGINX_SETUP/$service_name.conf"
-    echo "  ✓ acme.conf удалён"
+    if [ "$MODE" = "prod" ]; then
+        rm -f "$(get_nginx_setup_dir)/$service_name.conf"
+        echo "  ✓ acme.conf удалён"
+    fi
 
     reload_nginx
     echo "Сервис '$service_name' удалён"
@@ -273,7 +367,7 @@ run_for_all() {
     done
 }
 
-# ─── Интерактивное меню ──────────────────────────────────────────────────────
+# ─── Интерактивное меню (prod) ───────────────────────────────────────────────
 
 menu_pick_service() {
     local prompt="$1"
@@ -413,6 +507,53 @@ case "${1:-}" in
     status) cmd_status ;;
     list)   cmd_list ;;
     help)   cmd_help ;;
+    internal)
+        shift
+        MODE="internal"
+        case "${1:-}" in
+            start)
+                shift
+                args=()
+                for arg in "$@"; do
+                    if [ "$arg" = "--build" ]; then
+                        START_BUILD=true
+                    else
+                        args+=("$arg")
+                    fi
+                done
+                set -- "${args[@]}"
+
+                if [ "${1:-}" = "--all" ]; then
+                    run_for_all cmd_start
+                else
+                    for s in "$@"; do cmd_start "$s"; done
+                fi
+                ;;
+            stop)
+                shift
+                if [ "${1:-}" = "--all" ]; then run_for_all cmd_stop
+                else for s in "$@"; do cmd_stop "$s"; done; fi
+                ;;
+            down)
+                shift
+                if [ "${1:-}" = "--all" ]; then run_for_all cmd_down
+                else for s in "$@"; do cmd_down "$s"; done; fi
+                ;;
+            nginx)  shift; cmd_nginx "$@" ;;
+            status) cmd_status ;;
+            list)   cmd_list ;;
+            "")
+                echo "Использование: $0 internal {start|stop|down|nginx|status|list} ..."
+                echo "Запустите '$(basename "$0") help' для справки."
+                exit 1
+                ;;
+            *)
+                echo "Неизвестная подкоманда: '$1'"
+                echo "Использование: $0 internal {start|stop|down|nginx|status|list} ..."
+                exit 1
+                ;;
+        esac
+        ;;
     "")     show_menu ;;
     *)
         echo "Неизвестная команда: '$1'"

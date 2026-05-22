@@ -1,0 +1,28 @@
+services:
+  nginx-internal:
+    image: nginx:latest
+    container_name: nginx-internal
+    networks:
+      - nginx-network
+    ports:
+      - '80:80'
+    volumes:
+      - type: bind
+        source: ./nginx/internal/nginx.conf
+        target: /etc/nginx/nginx.conf
+      - type: bind
+        source: ./nginx/internal/conf.d
+        target: /etc/nginx/conf.d
+      - type: volume
+        source: web-data
+        target: /var/www/html
+    restart: unless-stopped
+
+networks:
+  nginx-network:
+    external: true
+    name: ${COMMON_NAME}_nginx-network
+
+volumes:
+  web-data:
+    name: ${COMMON_NAME}_web-data

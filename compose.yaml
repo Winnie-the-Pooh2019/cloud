@@ -30,7 +30,7 @@ services:
 
 networks:
   nginx-network:
-    driver: bridge
+    external: true
     name: ${COMMON_NAME}_nginx-network
 
 volumes:
