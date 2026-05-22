@@ -6,6 +6,7 @@ NGINX_CONF="$SCRIPT_DIR/nginx/prod/conf.d"
 NGINX_SETUP="$SCRIPT_DIR/nginx/setup/conf.d"
 
 PROJECT_NAME="cloud"
+START_BUILD=false
 
 # ─── Утилиты ────────────────────────────────────────────────────────────────
 
@@ -90,8 +91,10 @@ cmd_help() {
     echo "Использование: $(basename "$0") <команда> [аргументы]"
     echo ""
     echo "Управление сервисами:"
-    echo "  start <сервис...>   Запустить один или несколько сервисов"
-    echo "  start --all         Запустить все сервисы"
+    echo "  start <сервис...>              Запустить один или несколько сервисов"
+    echo "  start --all                    Запустить все сервисы"
+    echo "  start --build <сервис...>      Пересобрать образы и запустить"
+    echo "  start --build --all            Пересобрать образы и запустить все"
     echo "  stop  <сервис...>   Остановить один или несколько сервисов"
     echo "  stop  --all         Остановить все сервисы"
     echo "  down  <сервис...>   Остановить и удалить контейнеры сервиса"
@@ -176,7 +179,10 @@ cmd_start() {
     local env_arg=()
     [ -f "$service_dir/.env" ] && env_arg=(--env-file "$service_dir/.env")
 
-    if ! docker compose -f "$compose_file" "${env_arg[@]}" up -d --remove-orphans ; then
+    local up_args=(-d --remove-orphans)
+    [ "$START_BUILD" = true ] && up_args+=(--build)
+
+    if ! docker compose -f "$compose_file" "${env_arg[@]}" up "${up_args[@]}"; then
         rm -f "$NGINX_CONF/$service_name.conf"
         rm -f "$NGINX_SETUP/$service_name.conf"
         echo "Ошибка запуска '$service_name', конфиги откатаны"
@@ -305,6 +311,12 @@ menu_start() {
     cmd_start "$chosen"
 }
 
+menu_start_build() {
+    START_BUILD=true
+    menu_start
+    START_BUILD=false
+}
+
 menu_stop() {
     local running=()
     while IFS= read -r service; do
@@ -334,11 +346,12 @@ show_menu() {
         echo "  1) Доступные сервисы"
         echo "  2) Статус сервисов"
         echo "  3) Запустить сервис"
-        echo "  4) Остановить сервис"
-        echo "  5) Down сервис"
-        echo "  6) Запустить nginx"
-        echo "  7) Остановить nginx"
-        echo "  8) Перезагрузить nginx"
+        echo "  4) Запустить сервис (с пересборкой)"
+        echo "  5) Остановить сервис"
+        echo "  6) Down сервис"
+        echo "  7) Запустить nginx"
+        echo "  8) Остановить nginx"
+        echo "  9) Перезагрузить nginx"
         echo "  0) Выход"
         echo ""
         read -rp "Выберите действие: " choice
@@ -347,11 +360,12 @@ show_menu() {
             1) cmd_list ;;
             2) cmd_status ;;
             3) menu_start ;;
-            4) menu_stop ;;
-            5) menu_down ;;
-            6) cmd_nginx start ;;
-            7) cmd_nginx stop ;;
-            8) cmd_nginx reload ;;
+            4) menu_start_build ;;
+            5) menu_stop ;;
+            6) menu_down ;;
+            7) cmd_nginx start ;;
+            8) cmd_nginx stop ;;
+            9) cmd_nginx reload ;;
             0) exit 0 ;;
             *) echo "Неверный выбор" ;;
         esac
@@ -363,6 +377,16 @@ show_menu() {
 case "${1:-}" in
     start)
         shift
+        args=()
+        for arg in "$@"; do
+            if [ "$arg" = "--build" ]; then
+                START_BUILD=true
+            else
+                args+=("$arg")
+            fi
+        done
+        set -- "${args[@]}"
+
         if [ "${1:-}" = "--all" ]; then
             run_for_all cmd_start
         else

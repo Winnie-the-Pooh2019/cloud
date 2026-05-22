@@ -18,6 +18,9 @@ services:
         source: web-root
         target: /var/www/certbot
       - type: volume
+        source: web-data
+        target: /var/www/html
+      - type: volume
         source: certbot-etc
         target: /etc/letsencrypt
       - type: volume
@@ -31,6 +34,9 @@ networks:
     name: ${COMMON_NAME}_nginx-network
 
 volumes:
+  web-data:
+    driver: local
+    name: ${COMMON_NAME}_web-data
   web-root:
     driver: local
     name: ${COMMON_NAME}_web-root
